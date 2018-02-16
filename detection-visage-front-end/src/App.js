@@ -7,12 +7,11 @@ import ImageLinkForm from "./components/ImageLinkForm/ImageLinkFom";
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 import SignIn from './components/SignIn/SignIn';
 import Register from './components/Register/Register';
-import Clarifai from 'clarifai';
 import './App.css';
 
-const app = new Clarifai.App({
-  apiKey: 'bbbe93bd21d84b709b5816e577415c34'
-});
+// const app = new Clarifai.App({
+//   apiKey: 'bbbe93bd21d84b709b5816e577415c34'
+// });
 
 const particlesOptions = {
   particles: {
@@ -26,26 +25,39 @@ const particlesOptions = {
   }
 }
 
-
-class App extends Component {
-  constructor() {
-    super();
-    this.state = {
-      input: '',
+const initialStat ={
+  url: '',
       imageUrl: '',
       box: {},
       //route state afin se verifier nos deplacement sur les differentes page 
       route: 'signin',
       isSignedIn: false,
-    }
+      user :{
+        id:'',
+        username:'',
+        email:'',
+        entries:0,
+        joined:'',
+      }
+}
+
+
+class App extends Component {
+  constructor() {
+    super();
+    this.state = initialStat;
   }
 
   calculateFaceLocation = (data) => {
-    const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box;
-
+   
+    // on selectionne l'image pour obtenir sa taille initial
     const image = document.getElementById("inputimage");
-    const width = Number(image.width);
-    const height = Number(image.height);
+    const width = Number(image.naturalWidth);
+    const height = Number(image.naturalHeight);
+    const widthSmall = Number(image.width);
+
+    // on calcule le coefficient d'ajustement de la taille 
+    const scale = width / widthSmall;
 
     /*
     pour afficher le portrait ciblant le visage ;on utilise 
@@ -54,10 +66,11 @@ class App extends Component {
     */
 
     return {
-      leftCol: clarifaiFace.left_col * width,
-      topRow: clarifaiFace.top_row * height,
-      rightCol: width - (clarifaiFace.right_col * width),
-      bottomRow: height - (clarifaiFace.bottom_row * height)
+      left: (data[0].faceRectangle.left / scale)+"px",
+      top:(data[0].faceRectangle.top / scale) +"px",
+      width: (data[0].faceRectangle.width / scale)+"px",
+      height: (data[0].faceRectangle.height / scale)+"px",
+      
     }
   }
 
@@ -67,15 +80,26 @@ class App extends Component {
 
   onInputChange = (event) => {
 
-    this.setState({ input: event.target.value });
+    this.setState({ url: event.target.value });
   }
 
   onButtonSubmit = () => {
-    this.setState({ imageUrl: this.state.input });
-    // renvoit à l'api de Clarifai, afin d'analyser l'image  
+    // renvoit à l'api de face api, afin d'analyser l'image  
 
-    app.models.predict(Clarifai.FACE_DETECT_MODEL, this.state.input).then(response => this.displayFaceBox(this.calculateFaceLocation(response)))
-      .catch(error => console.log(error))
+    this.setState({imageUrl: this.state.url});
+    fetch('http://localhost:8081/api', {
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        url: this.state.url
+      })
+    })
+    .then(response => response.json())
+    .then(response => {
+      console.log(response)
+      this.displayFaceBox(this.calculateFaceLocation(response))
+    })
+    .catch(err => console.log(err));
   }
 
   onRouteChange = (route) => {
