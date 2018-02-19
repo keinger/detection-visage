@@ -9,9 +9,6 @@ import SignIn from './components/SignIn/SignIn';
 import Register from './components/Register/Register';
 import './App.css';
 
-// const app = new Clarifai.App({
-//   apiKey: 'bbbe93bd21d84b709b5816e577415c34'
-// });
 
 const particlesOptions = {
   particles: {
@@ -29,6 +26,8 @@ const initialStat ={
   url: '',
       imageUrl: '',
       box: {},
+      visage: [],
+
       //route state afin se verifier nos deplacement sur les differentes page 
       route: 'signin',
       isSignedIn: false,
@@ -36,7 +35,6 @@ const initialStat ={
         id:'',
         username:'',
         email:'',
-        entries:0,
         joined:'',
       }
 }
@@ -53,7 +51,6 @@ class App extends Component {
     // on selectionne l'image pour obtenir sa taille initial
     const image = document.getElementById("inputimage");
     const width = Number(image.naturalWidth);
-    const height = Number(image.naturalHeight);
     const widthSmall = Number(image.width);
 
     // on calcule le coefficient d'ajustement de la taille 
@@ -62,15 +59,12 @@ class App extends Component {
     /*
     pour afficher le portrait ciblant le visage ;on utilise 
     un objet qui affichera les differents points reliés entre-elles 
-    à l'aide de CSS
+    à l'aide de CSS puis a l'aide du variable scale on remet le protrait 
+    à l'échelle
     */
 
     return {
-      left: (data[0].faceRectangle.left / scale)+"px",
-      top:(data[0].faceRectangle.top / scale) +"px",
-      width: (data[0].faceRectangle.width / scale)+"px",
-      height: (data[0].faceRectangle.height / scale)+"px",
-      
+      scale : scale,
     }
   }
 
@@ -96,8 +90,14 @@ class App extends Component {
     })
     .then(response => response.json())
     .then(response => {
-      console.log(response)
-      this.displayFaceBox(this.calculateFaceLocation(response))
+      console.log(response);
+      this.setState({visage : response});
+
+      
+        this.displayFaceBox(this.calculateFaceLocation(response));
+      
+
+      
     })
     .catch(err => console.log(err));
   }
@@ -111,7 +111,11 @@ class App extends Component {
     this.setState({ route: route });
   }
 
+
+
+
   render() {
+
     return (
       <div className="App">
         <Particles className="particles"
@@ -125,7 +129,7 @@ class App extends Component {
             <ImageLinkForm
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onButtonSubmit} />
-            <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl} />
+           <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl} visages={this.state.visage} />)
           </div>
 
           : (
