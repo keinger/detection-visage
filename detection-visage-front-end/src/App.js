@@ -7,7 +7,14 @@ import ImageLinkForm from "./components/ImageLinkForm/ImageLinkFom";
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 import SignIn from './components/SignIn/SignIn';
 import Register from './components/Register/Register';
+import Modal from '../src/components/UI/Modal/Modal';
+import AddingPerson from '../src/components/AddingPerson/AddingPerson';
 import './App.css';
+
+// import pour demo portfolio
+import { detectFace } from '../src/components-for-demo/Detect';
+import { identify } from '../src/components-for-demo/IdentityPerson';
+import { identifyFace } from '../src/components-for-demo/Identify';
 
 
 const particlesOptions = {
@@ -22,21 +29,25 @@ const particlesOptions = {
   }
 }
 
-const initialStat ={
+const initialStat = {
   url: '',
-      imageUrl: '',
-      box: {},
-      visage: [],
+  imageUrl: '',
+  box: {},
+  visage: [],
+  personId: '',
+  name: [],
+  modalShow: false,
 
-      //route state afin se verifier nos deplacement sur les differentes page 
-      route: 'signin',
-      isSignedIn: false,
-      user :{
-        id:'',
-        username:'',
-        email:'',
-        joined:'',
-      }
+
+  //route state afin se verifier nos deplacement sur les differentes page 
+  route: 'signin',
+  isSignedIn: false,
+  user: {
+    id: '',
+    username: '',
+    email: '',
+    joined: '',
+  }
 }
 
 
@@ -47,7 +58,7 @@ class App extends Component {
   }
 
   calculateFaceLocation = (data) => {
-   
+
     // on selectionne l'image pour obtenir sa taille initial
     const image = document.getElementById("inputimage");
     const width = Number(image.naturalWidth);
@@ -64,7 +75,7 @@ class App extends Component {
     */
 
     return {
-      scale : scale,
+      scale: scale,
     }
   }
 
@@ -78,29 +89,144 @@ class App extends Component {
   }
 
   onButtonSubmit = () => {
-    // renvoit à l'api de face api, afin d'analyser l'image  
+    this.setState({ imageUrl: this.state.url });
 
-    this.setState({imageUrl: this.state.url});
+    /* renvoit au serveur la tâche de gerer de face api, afin d'analyser l'image; non utilisé dans la demo
     fetch('http://localhost:8081/api', {
       method: 'post',
-      headers: {'Content-Type': 'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: this.state.url
       })
     })
-    .then(response => response.json())
-    .then(response => {
-      console.log(response);
-      this.setState({visage : response});
+      .then(response => response.json())
+      .then(response => {
+        console.log(response);
+        this.setState({ visage: response });
 
-      
+
         this.displayFaceBox(this.calculateFaceLocation(response));
-      
+
+      })
+      .catch(err => console.log(err));
+
+      */
+    // ci dessous methodes utilisées pour la demo
+    if (this.state.url !== "") {
+
+      let url = this.state.url;
+
+      const params = {
+        url,
+      }
+      detectFace(params)
+        .then(response => response.json())
+        .then(response => {
 
       
-    })
-    .catch(err => console.log(err));
+
+          this.setState({
+            visage: response,
+            name: [],
+          }, () => {
+
+            this.state.visage.map((faces, index) => (
+              this.onIdentifyFaceId(index)
+            ));
+
+          });
+
+          this.displayFaceBox(this.calculateFaceLocation(response));
+
+        })
+        .catch(err => console.log(err));
+
+    }
+
   }
+
+
+  onIdentifyFaceId = (index) => {
+
+    let faceIds = this.state.visage[index].faceId;
+    let personGroupId = "demo";
+
+    const params = {
+      faceIds,
+      personGroupId,
+    };
+
+    identifyFace(params)
+      .then(response => response.json())
+      .then(body => {
+        
+
+        if (body[0].candidates[0] !== undefined) {
+
+          this.setState({
+            personId: body[0].candidates[0].personId
+          }, () => {
+            this.onPersonNameIdentify()
+          })
+
+        }
+        else{
+          
+          this.setState(previousState => ({
+           name: [...previousState.name, 'inconnu(e)'],
+         }), () => {
+           
+         })
+        }
+        
+
+
+
+      })
+      .catch(console.error());
+
+  }
+
+  onPersonNameIdentify = () => {
+
+    let personGroupId = "demo";
+    let personId = this.state.personId;
+
+    const params = {
+      personGroupId,
+      personId,
+    }
+
+    identify(params)
+      .then(response => response.json())
+      .then(data => {
+
+        this.setState(previousState => ({
+          name: [...previousState.name, data.name],
+        }), () => {
+         
+        })
+
+      })
+      .catch(console.error())
+
+  }
+
+  onModalCloseHandler = () => {
+    this.setState({
+      modalShow: false,
+    })
+  }
+
+  onModalShowHandler = () => {
+    this.setState({
+      modalShow: true,
+    })
+  }
+
+
+  /*******Route*******/
+
 
   onRouteChange = (route) => {
     if (route === 'signout') {
@@ -112,9 +238,17 @@ class App extends Component {
   }
 
 
+  /*shouldComponentUpdate(nextState) {
+    if(this.state.visageIds !== nextState.visageIds){
+      return true;
+    }
+    return false;
+  }*/
+
 
 
   render() {
+
 
     return (
       <div className="App">
@@ -125,11 +259,14 @@ class App extends Component {
         {this.state.route === 'home'
           ? <div>
             <Logo />
-            <Rank />
+            <Modal show={this.state.modalShow} modalClosed={this.onModalCloseHandler} >
+              <AddingPerson modalClosed={this.onModalCloseHandler} />
+            </Modal>
+            <Rank showModal={this.onModalShowHandler} />
             <ImageLinkForm
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onButtonSubmit} />
-           <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl} visages={this.state.visage} />)
+            <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl} visages={this.state.visage} names={this.state.name} />)
           </div>
 
           : (

@@ -1,14 +1,15 @@
 import React from 'react';
 
-const Rank =() =>{
-    return(
+const Rank = (props) => {
+    return (
         <div>
             <div className="white f3">
-                {"Moses, votre rang est... "}
+                {"Ajouter une personne à identifier."}
             </div>
-            <div className="white f1">
-                {"#3"}
-            </div>
+            <button
+                className="w-30 grow f4 link ph3 pv2 dib white bg-light-purple"
+                onClick={props.showModal}
+            >Ajoutez</button>
         </div>
     );
 }
